@@ -66,7 +66,7 @@ const worker = new Worker<EmailJobData>(
       to:       [to],
       subject,
       html,
-      replyTo:  (variables as Record<string, string>).email ?? undefined,
+      reply_to:  (variables as Record<string, string>).email ?? undefined,
     })
 
     if (error) {

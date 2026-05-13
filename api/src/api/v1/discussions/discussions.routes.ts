@@ -77,9 +77,9 @@ router.patch(
 router.get('/me',
   requireAuth,
   asyncHandler(async (req, res) => {
-    const { DiscussionService } = await import('./discussions.service')
+    // const { DiscussionService } = await import('./discussions.service')
     const { sendPaginated } = await import('../../../utils/response')
-    const mongoose = (await import('mongoose')).default
+    // const mongoose = (await import('mongoose')).default
     const { Discussion } = await import('./discussions.model')
     const { trackDb } = await import('../../../lib/db')
     const { buildPaginationMeta } = await import('../../../utils/response')
