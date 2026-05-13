@@ -44,14 +44,14 @@ services:
   api:
     build:
       context: ./api
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     container_name: illustrates_api
     restart: unless-stopped
     ports:
       - '5001:5001'
-    env_file: .env
+    env_file:
+      - ./api/.env
     volumes:
-      - ./api/src:/app/src:delegated
       - ./logs:/app/logs
     depends_on:
       mongo:
@@ -78,7 +78,7 @@ services:
     container_name: illustrates_mongo
     restart: unless-stopped
     ports:
-      - '27017:27017'
+      - '27017'
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-root}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password}
@@ -102,7 +102,7 @@ services:
     container_name: illustrates_redis
     restart: unless-stopped
     ports:
-      - '6379:6379'
+      - '6379'
     command: >
       redis-server
       --appendonly yes
