@@ -1,0 +1,202 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design tokens ─────────────────────────────────────────────────────────── */
+:root {
+  /* Chrome (nav, footer, cards) */
+  --bg-base:       #060412;
+  --bg-nav:        rgba(6,4,18,0.95);
+  --bg-surface:    rgba(255,255,255,0.04);
+  --bg-surface-2:  rgba(255,255,255,0.07);
+  --text-1:        #f0f4ff;
+  --text-2:        rgba(255,255,255,0.5);
+  --text-3:        rgba(255,255,255,0.28);
+  --border:        rgba(255,255,255,0.08);
+  --border-mid:    rgba(255,255,255,0.14);
+  --input-bg:      rgba(255,255,255,0.06);
+  --input-border:  rgba(255,255,255,0.16);
+
+  /* Section backgrounds */
+  --section-hero:    linear-gradient(135deg,#060412 0%,#0d0520 35%,#060c1e 65%,#060412 100%);
+  --section-work:    linear-gradient(180deg,#07041a,#090520);
+  --section-writing: linear-gradient(180deg,#0f0608,#100810);
+  --section-about:   linear-gradient(180deg,#04100e,#060f0c);
+  --section-contact: linear-gradient(135deg,#080420,#060c20,#080420);
+
+  /* ── Accent / theme color system ────────────────────────────────────────── */
+  /* These are overridden by the accent picker in /dashboard/settings         */
+  --accent-from:      #4f46e5;
+  --accent-to:        #06b6d4;
+  --accent-logo-a:    #7dd3fc;
+  --accent-logo-b:    #c084fc;
+  --accent-warm-a:    #fb923c;
+  --accent-warm-b:    #f472b6;
+  --accent-green-a:   #34d399;
+  --accent-green-b:   #10b981;
+}
+
+[data-theme="light"] {
+  --bg-base:       #f4f3ff;
+  --bg-nav:        rgba(244,243,255,0.96);
+  --bg-surface:    rgba(0,0,0,0.04);
+  --bg-surface-2:  rgba(0,0,0,0.07);
+  --text-1:        #110d2e;
+  --text-2:        rgba(17,13,46,0.65);
+  --text-3:        rgba(17,13,46,0.38);
+  --border:        rgba(0,0,0,0.09);
+  --border-mid:    rgba(0,0,0,0.16);
+  --input-bg:      rgba(0,0,0,0.05);
+  --input-border:  rgba(0,0,0,0.18);
+
+  --section-hero:    linear-gradient(135deg,#f4f3ff 0%,#eef2ff 40%,#f0f7ff 70%,#f4f3ff 100%);
+  --section-work:    linear-gradient(180deg,#eef2ff,#f0eeff);
+  --section-writing: linear-gradient(180deg,#fff7ed,#fff4e6);
+  --section-about:   linear-gradient(180deg,#ecfdf5,#f0fdf4);
+  --section-contact: linear-gradient(135deg,#eef2ff,#f0f4ff,#eef2ff);
+}
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg-base);
+    color: var(--text-1);
+    font-family: var(--font-geist-sans), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    transition: background 0.25s ease, color 0.25s ease;
+  }
+  h1, h2, h3, h4 { font-family: 'Syne', sans-serif; }
+  input, textarea, select, button { font-family: inherit; }
+}
+
+@layer components {
+  /* ── Gradient text — ALL use CSS vars so accent picker works ─────────────── */
+  .g-logo {
+    background: linear-gradient(90deg, var(--accent-logo-a), var(--accent-logo-b));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .g-headline {
+    background: linear-gradient(90deg, var(--accent-from), var(--accent-to));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .g-primary {
+    background: linear-gradient(90deg, var(--accent-from), var(--accent-to));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .g-warm {
+    background: linear-gradient(90deg, var(--accent-warm-a), var(--accent-warm-b));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .g-green {
+    background: linear-gradient(90deg, var(--accent-green-a), var(--accent-green-b));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+
+  /* ── Navigation ─────────────────────────────────────────────────────────── */
+  .nav-link {
+    @apply text-[var(--text-3)] hover:text-[var(--text-1)] transition-colors duration-150
+           rounded-md px-3 py-1.5 text-xs font-normal no-underline;
+  }
+  .nav-link-active {
+    @apply text-[var(--text-1)] font-medium bg-[var(--bg-surface-2)];
+  }
+
+  /* ── Cards ───────────────────────────────────────────────────────────────── */
+  .card {
+    @apply rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] transition-all duration-200;
+  }
+  /* card-hover: plain CSS — @apply can't combine CSS vars with opacity modifiers */
+  .card-hover:hover {
+    border-color: color-mix(in srgb, var(--accent-from) 40%, transparent);
+    background-color: color-mix(in srgb, var(--accent-from) 5%, transparent);
+  }
+
+  /* ── Tag chip ────────────────────────────────────────────────────────────── */
+  .tag {
+    @apply inline-block px-2 py-0.5 rounded text-[10px] font-mono
+           bg-[var(--bg-surface-2)] border border-[var(--border-mid)] text-[var(--text-2)];
+  }
+
+  /* ── Input ───────────────────────────────────────────────────────────────── */
+  .input-base {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text-1);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    font-family: inherit;
+  }
+  @media (max-width: 640px) {
+    .input-base { padding: 7px 10px; font-size: 12px; }
+  }
+  .input-base::placeholder { color: var(--text-3); }
+  .input-base:focus {
+    border-color: var(--accent-from);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-from) 15%, transparent);
+  }
+
+  /* ── Buttons — use CSS vars so accent picker changes them ────────────────── */
+  .btn-primary {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 500;
+    color: white; border: none; cursor: pointer;
+    background: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+    transition: opacity 0.15s;
+  }
+  .btn-primary:hover  { opacity: 0.88; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-ghost {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-mid);
+    color: var(--text-2);
+  }
+  .btn-ghost:hover  { background: var(--bg-surface-2); color: var(--text-1); }
+  .btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-danger {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer;
+    background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171;
+    transition: all 0.15s;
+  }
+  .btn-danger:hover { background: rgba(239,68,68,0.18); }
+
+  .btn-sm  { padding: 5px 12px !important; font-size: 11px !important; border-radius: 6px !important; }
+  .btn-lg  { padding: 11px 28px !important; font-size: 15px !important; border-radius: 10px !important; }
+
+  /* ── Row hover ───────────────────────────────────────────────────────────── */
+  .row-hover { transition: background 0.15s; }
+  .row-hover:hover { background: var(--bg-surface-2) !important; }
+
+  /* ── Dividers ────────────────────────────────────────────────────────────── */
+  .section-divider { height: 1px; }
+  .div-primary { background: linear-gradient(90deg,transparent,var(--accent-from),var(--accent-to),transparent); }
+  .div-warm    { background: linear-gradient(90deg,transparent,var(--accent-warm-a),var(--accent-warm-b),transparent); }
+  .div-green   { background: linear-gradient(90deg,transparent,var(--accent-green-a),var(--accent-green-b),transparent); }
+  .div-violet  { background: linear-gradient(90deg,transparent,var(--accent-from),var(--accent-to),transparent); }
+}
+
+@layer utilities {
+  @keyframes fade-up  { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes modal-in { from{opacity:0;transform:scale(0.97)} to{opacity:1;transform:scale(1)} }
+  @keyframes spin     { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+  .animate-fade-up { animation: fade-up 0.5s ease both; }
+  .animate-modal   { animation: modal-in 0.2s ease; }
+  .animate-spin    { animation: spin 1s linear infinite; }
+
+  .delay-1 { animation-delay: 80ms; }
+  .delay-2 { animation-delay: 160ms; }
+  .delay-3 { animation-delay: 240ms; }
+}

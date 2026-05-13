@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    project: portfolio
+
+scrape_configs:
+  - job_name: portfolio-api
+    static_configs:
+      - targets: ['api:5001']
+    metrics_path: /metrics
