@@ -1,4 +1,4 @@
-# illustrates.dev [illustrates.dev Preview](https://platform.illustrates.dev/)
+[illustrates.dev Preview](https://platform.illustrates.dev/)
 
 Full-stack portfolio platform — Express API + Next.js in a single monorepo.
 
