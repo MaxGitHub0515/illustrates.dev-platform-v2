@@ -15,7 +15,7 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "type-check": "tsc --noEmit",
-    "prepare": "husky",
+    "prepare": "command -v husky >/dev/null 2>&1 && husky || true",
     "seed": "ts-node scripts/seed.ts",
     "seed:reset": "ts-node scripts/seed.ts --reset"
   },
