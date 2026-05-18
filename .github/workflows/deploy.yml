@@ -1,0 +1,48 @@
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - production-ready
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install root dependencies
+        run: npm install
+
+      - name: Install API dependencies
+        working-directory: ./api
+        run: npm install
+
+      - name: Install Web dependencies
+        working-directory: ./web
+        run: npm install
+
+      - name: Typecheck
+        run: make typecheck
+
+      - name: Build Docker containers
+        run: docker compose build
+
+      - name: Deploy to Debian VM
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.GCP_HOST }}
+          username: ${{ secrets.GCP_USER }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          script: |
+            cd ~/portfolio
+            git checkout production-ready
+            git pull origin production-ready
+            docker compose up -d --build
