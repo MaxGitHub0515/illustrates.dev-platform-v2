@@ -4,18 +4,62 @@ import Link from 'next/link'
 import { useUser } from '@clerk/nextjs'
 import type { ApiPost } from '@/types/api'
 
+/* ── Interactive Code Block Wrapper Component ───────────────────────────────── */
+function CodeBlock({ code, lang }: { code: string; lang: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy text: ', err)
+    }
+  }
+
+  return (
+    <div className="rounded-lg overflow-hidden my-5 border border-[var(--border)] group relative">
+      {/* Top Window Bar */}
+      <div className="flex items-center gap-1.5 px-3.5 py-2 bg-[var(--bg-surface)] border-b border-[var(--border)]">
+        {['#ff5f57','#ffbd2e','#28c840'].map(c => (
+          <div key={c} className="w-2 h-2 rounded-full opacity-75" style={{ background: c }} />
+        ))}
+        
+        {/* Language badge & Copy Button container */}
+        <div className="ml-auto flex items-center gap-3">
+          {lang && (
+            <span className="text-[10px] font-mono text-[var(--text-3)] uppercase tracking-wider">
+              {lang}
+            </span>
+          )}
+          <button
+            onClick={handleCopy}
+            className="text-[11px] font-mono text-[var(--text-3)] hover:text-[var(--text-1)] bg-[var(--bg-base)] border border-[var(--border)] px-2 py-0.5 rounded transition-all duration-150 active:scale-95"
+          >
+            {copied ? 'Copied!' : 'Copy'}
+          </button>
+        </div>
+      </div>
+      
+      {/* Code Area */}
+      <pre className="m-0 p-4 bg-[#080a14] overflow-x-auto">
+        <code className="text-[12px] font-mono text-white/70 leading-[1.8] whitespace-pre">{code}</code>
+      </pre>
+    </div>
+  )
+}
+
 /* ── Markdown-lite sequential state-machine renderer ────────────────────────── */
 function renderBody(body: string) {
   if (!body) return []
 
-  // Normalize copy-pasted non-breaking spaces (\u00a0) to normal spaces (\u0020)
   const normalizedBody = body.replace(/\u00a0/g, ' ')
   const lines = normalizedBody.split('\n')
   
   const nodes: React.ReactNode[] = []
   let key = 0
   
-  // Parser state trackers
   let inCodeBlock = false
   let codeLines: string[] = []
   let codeLang = ''
@@ -48,30 +92,16 @@ function renderBody(body: string) {
     const line = lines[i]
     const trimmed = line.trim()
 
-    // 1. Handle Code Block Toggles
     if (trimmed.startsWith('```')) {
       if (inCodeBlock) {
         const codeContent = codeLines.join('\n')
+        // Using our brand-new interactive CodeBlock component here!
         nodes.push(
-          <div key={`code-${key++}`} className="rounded-lg overflow-hidden my-5 border border-[var(--border)]">
-            <div className="flex items-center gap-1.5 px-3.5 py-2 bg-[var(--bg-surface)] border-b border-[var(--border)]">
-              {['#ff5f57','#ffbd2e','#28c840'].map(c => (
-                <div key={c} className="w-2 h-2 rounded-full opacity-75" style={{ background: c }} />
-              ))}
-              {codeLang && (
-                <span className="ml-auto text-[10px] font-mono text-[var(--text-3)] uppercase tracking-wider">
-                  {codeLang}
-                </span>
-              )}
-            </div>
-            <pre className="m-0 p-4 bg-[#080a14] overflow-x-auto">
-              <code className="text-[12px] font-mono text-white/70 leading-[1.8] whitespace-pre">{codeContent}</code>
-            </pre>
-          </div>
+          <CodeBlock key={`code-${key++}`} code={codeContent} lang={codeLang} />
         )
-        inCodeBlock = false;
-        codeLines = [];
-        codeLang = '';
+        inCodeBlock = false
+        codeLines = []
+        codeLang = ''
       } else {
         flushList()
         inCodeBlock = true
@@ -80,13 +110,11 @@ function renderBody(body: string) {
       continue
     }
 
-    // Capture precise contents inside code segments sequentially
     if (inCodeBlock) {
       codeLines.push(line)
       continue
     }
 
-    // 2. Headings
     if (trimmed.startsWith('## ')) {
       flushList()
       nodes.push(
@@ -107,19 +135,16 @@ function renderBody(body: string) {
       continue
     }
 
-    // 3. Unordered Lists
     if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
       currentListItems.push(trimmed.replace(/^[-*]\s+/, ''))
       continue
     }
 
-    // 4. White space segmentation rules
     if (trimmed === '') {
       flushList()
       continue
     }
 
-    // 5. Normal paragraphs falling through rules
     flushList()
     nodes.push(
       <p key={`p-${key++}`} className="text-[14px] text-[var(--text-2)] leading-[1.85] mb-4">
@@ -128,9 +153,7 @@ function renderBody(body: string) {
     )
   }
 
-  // Safety flush if post ends abruptly on a list items element
   flushList()
-
   return nodes
 }
 
@@ -236,7 +259,6 @@ export function PostContent({ post }: { post: ApiPost }) {
       {/* Header */}
       <div className="px-7 pt-11 pb-8 border-b border-[var(--border)] relative overflow-hidden"
            style={{ background: 'linear-gradient(180deg,#0a0312,#0f0608)' }}>
-        {/* Accent line */}
         <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-warm" />
 
         <div className="max-w-[720px] mx-auto">
