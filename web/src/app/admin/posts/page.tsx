@@ -1,6 +1,7 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { usePosts, useDeletePost, useCreatePost, useUpdatePost } from '@/lib/hooks/usePosts'
+import { useUploadImage } from '@/lib/hooks/useUploadImage'
 import { AdminError } from '@/components/admin/AdminError'
 import type { ApiPost, CreatePostDto } from '@/types/api'
 
@@ -40,11 +41,54 @@ function PostForm({ initial, onSave, onCancel, saving, saveError }: {
   initial: CreatePostDto; onSave: (dto: CreatePostDto) => void
   onCancel: () => void; saving: boolean; saveError: string
 }) {
-  const [form, setForm]     = useState<CreatePostDto>(initial)
-  const [errors, setErrors] = useState<FieldErrors>({})
+  const [form, setForm]       = useState<CreatePostDto>(initial)
+  const [errors, setErrors]   = useState<FieldErrors>({})
+  const [uploading, setUpl]   = useState(false)
+  const [uploadErr, setUpErr] = useState('')
+  const [pending, setPending] = useState<{ url: string; name: string; cursor: number } | null>(null)
+  const fileRef               = useRef<HTMLInputElement>(null)
+  const textareaRef           = useRef<HTMLTextAreaElement>(null)
+  const { uploadImage }       = useUploadImage()
+
   const set = (k: keyof CreatePostDto, v: string) => {
     setForm(f => ({ ...f, [k]: v }))
     if (errors[k]) setErrors(e => ({ ...e, [k]: undefined }))
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUpl(true); setUpErr('')
+    try {
+      const { url } = await uploadImage(file)
+      const ta     = textareaRef.current
+      const cursor = ta?.selectionStart ?? form.body.length
+      const name   = file.name.replace(/\.[^.]+$/, '')
+      setPending({ url, name, cursor })
+    } catch (err) {
+      setUpErr((err as Error).message)
+    } finally {
+      setUpl(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  function insertWithSize(size: number) {
+    if (!pending) return
+    const { url, name, cursor } = pending
+    const alt      = size === 100 ? name : `${name}|${size}`
+    const markdown = `![${alt}](${url})`
+    const body     = form.body.slice(0, cursor) + '\n' + markdown + '\n' + form.body.slice(cursor)
+    setForm(f => ({ ...f, body }))
+    setPending(null)
+    setTimeout(() => {
+      const ta = textareaRef.current
+      if (ta) {
+        ta.focus()
+        const pos = cursor + markdown.length + 2
+        ta.setSelectionRange(pos, pos)
+      }
+    }, 50)
   }
 
   function submit() {
@@ -58,6 +102,7 @@ function PostForm({ initial, onSave, onCancel, saving, saveError }: {
          style={{ background:'rgba(4,2,16,0.88)', backdropFilter:'blur(8px)' }}>
       <div className="w-full max-w-[640px] rounded-2xl overflow-hidden border border-orange-400/20"
            style={{ background:'#0d0b1e', maxHeight:'90vh', display:'flex', flexDirection:'column' }}>
+
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] flex-shrink-0">
           <h3 className="text-[15px] font-medium text-[var(--text-1)]">
             {initial.title ? 'Edit post' : 'New post'}
@@ -79,9 +124,79 @@ function PostForm({ initial, onSave, onCancel, saving, saveError }: {
           </Field>
 
           <Field label="Body (Markdown)" required error={errors.body}>
-            <textarea value={form.body} onChange={e=>set('body',e.target.value)}
-                      rows={8} className={`${inputCls(errors.body)} resize-y`}
-                      placeholder="## Introduction&#10;Write your post in Markdown..." />
+            {/* Toolbar */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-t-lg border border-b-0 border-[var(--border)] bg-[var(--bg-surface)]">
+              <span className="text-[10px] uppercase tracking-wider text-[var(--text-3)] font-medium">Insert</span>
+              <div className="h-3 w-px bg-[var(--border)]" />
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                title="Upload image"
+                className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] text-[var(--text-2)] border border-[var(--border)] bg-[var(--bg-base)] hover:text-[var(--text-1)] hover:border-[var(--border-mid)] transition-all cursor-pointer disabled:opacity-50"
+              >
+                {uploading ? (
+                  <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" strokeOpacity="0.25"/>
+                    <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round"/>
+                  </svg>
+                ) : (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                )}
+                {uploading ? 'Uploading…' : 'Image'}
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+                className="hidden"
+                onChange={handleImageUpload}
+              />
+              {uploadErr && <span className="text-[11px] text-red-400 ml-1">⚠ {uploadErr}</span>}
+            </div>
+
+            {/* Size picker — appears after upload, before inserting */}
+            {pending && (
+              <div className="flex items-center gap-2 px-3 py-2 border border-t-0 border-b-0 border-indigo-500/25 bg-indigo-500/8 flex-wrap">
+                <span className="text-[11px] text-indigo-300 flex-shrink-0">
+                  Size for <strong className="text-indigo-200">{pending.name}</strong>:
+                </span>
+                {[
+                  { label: 'Full',   size: 100 },
+                  { label: 'Large',  size: 75  },
+                  { label: 'Medium', size: 50  },
+                  { label: 'Small',  size: 25  },
+                ].map(({ label, size }) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => insertWithSize(size)}
+                    className="px-2.5 py-1 rounded-md text-[11px] font-medium border border-indigo-400/35 bg-indigo-500/15 text-indigo-300 hover:bg-indigo-500/25 transition-all cursor-pointer"
+                  >
+                    {label}{size < 100 ? ` (${size}%)` : ''}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setPending(null)}
+                  className="px-2 py-1 rounded-md text-[11px] text-[var(--text-3)] hover:text-[var(--text-1)] cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            <textarea
+              ref={textareaRef}
+              value={form.body}
+              onChange={e=>set('body',e.target.value)}
+              rows={8}
+              className={`${inputCls(errors.body)} resize-y rounded-t-none border-t-0`}
+              placeholder="## Introduction&#10;Write your post in Markdown..."
+            />
           </Field>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -132,7 +247,6 @@ export default function AdminPosts() {
   const [modal,     setModal]     = useState<'create'|{post:ApiPost}|null>(null)
   const [saveError, setSaveError] = useState('')
 
-  // Pass no status filter — admin sees all (backend now returns all for admin)
   const { data, isLoading, error, refetch } = usePosts()
   const createMut = useCreatePost()
   const updateMut = useUpdatePost()

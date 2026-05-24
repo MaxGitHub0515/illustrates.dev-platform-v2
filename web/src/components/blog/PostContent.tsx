@@ -20,20 +20,16 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
 
   return (
     <div className="rounded-lg overflow-hidden my-5 border border-[var(--border)]">
-      {/* Top Window Bar */}
       <div className="flex items-center gap-1.5 px-3.5 py-2 bg-[var(--bg-surface)] border-b border-[var(--border)]">
         {['#ff5f57','#ffbd2e','#28c840'].map(c => (
           <div key={c} className="w-2 h-2 rounded-full opacity-75" style={{ background: c }} />
         ))}
-
         <div className="ml-auto flex items-center gap-2.5">
           {lang && (
             <span className="text-[10px] font-mono text-[var(--text-3)] uppercase tracking-wider select-none">
               {lang}
             </span>
           )}
-
-          {/* Copy button — always visible, icon only */}
           <button
             onClick={handleCopy}
             title={copied ? 'Copied!' : 'Copy code'}
@@ -46,7 +42,6 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
           >
             {copied ? (
               <>
-                {/* Checkmark */}
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
                   stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12" />
@@ -55,7 +50,6 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
               </>
             ) : (
               <>
-                {/* Copy icon */}
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
                   stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
@@ -67,8 +61,6 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
           </button>
         </div>
       </div>
-
-      {/* Code Area */}
       <pre className="m-0 p-4 bg-[#080a14] overflow-x-auto">
         <code className="text-[12px] font-mono text-white/70 leading-[1.8] whitespace-pre">{code}</code>
       </pre>
@@ -167,6 +159,33 @@ function renderBody(body: string) {
 
     if (trimmed === '') {
       flushList()
+      continue
+    }
+
+    // Image: ![alt](url) or ![alt|75](url) for sized images
+    const imageMatch = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/)
+    if (imageMatch) {
+      flushList()
+      const altRaw    = imageMatch[1]
+      const url       = imageMatch[2]
+      const sizeMatch = altRaw.match(/^(.*)\|(\d+)$/)
+      const alt   = sizeMatch ? sizeMatch[1] : altRaw
+      const width = sizeMatch ? `${sizeMatch[2]}%` : '100%'
+      nodes.push(
+        <figure key={`img-${key++}`} className="my-6" style={{ textAlign: 'center' }}>
+          <img
+            src={url}
+            alt={alt}
+            style={{ width, maxWidth: '100%', borderRadius: '8px', border: '1px solid var(--border)' }}
+            loading="lazy"
+          />
+          {alt && (
+            <figcaption style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '6px', fontStyle: 'italic' }}>
+              {alt}
+            </figcaption>
+          )}
+        </figure>
+      )
       continue
     }
 
@@ -281,17 +300,13 @@ function Comments({ slug }: { slug: string }) {
 export function PostContent({ post }: { post: ApiPost }) {
   return (
     <div className="bg-[var(--bg-base)] min-h-[80vh]">
-
-      {/* Header — px-7 on inner max-w div to match body alignment exactly */}
       <div className="pt-11 pb-8 border-b border-[var(--border)] relative overflow-hidden"
            style={{ background: 'linear-gradient(180deg,#0a0312,#0f0608)' }}>
         <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-warm" />
-
         <div className="max-w-[720px] mx-auto px-7">
           <Link href="/blog" className="text-[12px] text-[var(--text-3)] no-underline inline-flex items-center gap-1.5 mb-5 hover:text-[var(--text-1)] transition-colors">
             ← Writing
           </Link>
-
           <h1 className="text-[clamp(20px,3vw,28px)] font-medium text-[var(--text-1)] tracking-tight leading-tight mb-3 font-syne">
             {post.title}
           </h1>
@@ -300,7 +315,6 @@ export function PostContent({ post }: { post: ApiPost }) {
               {post.description}
             </p>
           )}
-
           <div className="flex items-center gap-3.5 flex-wrap text-[12px] text-[var(--text-3)]">
             <span className="text-[var(--text-2)]">illustrates.dev</span>
             <span className="text-[var(--border-mid)]">·</span>
@@ -308,14 +322,11 @@ export function PostContent({ post }: { post: ApiPost }) {
             <span className="text-[var(--border-mid)]">·</span>
             <span>{post.viewCount} views</span>
           </div>
-
           <div className="flex gap-1.5 mt-3.5">
             {post.tags.map(t => <span key={t} className="tag">{t}</span>)}
           </div>
         </div>
       </div>
-
-      {/* Body — px-7 on same max-w div = perfect alignment with header */}
       <div className="max-w-[720px] mx-auto px-7 py-9 pb-16">
         <article>{renderBody(post.body)}</article>
         <Comments slug={post.slug} />
@@ -325,7 +336,6 @@ export function PostContent({ post }: { post: ApiPost }) {
           </Link>
         </div>
       </div>
-
     </div>
   )
 }
