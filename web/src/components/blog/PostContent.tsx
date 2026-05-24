@@ -6,58 +6,92 @@ import type { ApiPost } from '@/types/api'
 
 /* ── Markdown-lite renderer ─────────────────────────────────────────────────── */
 function renderBody(body: string) {
-  return body.split('\n\n').map((block, i) => {
-    const inline = (text: string) =>
-      text.split(/(\*\*[^*]+\*\*)/).map((part, j) =>
-        part.startsWith('**') && part.endsWith('**')
-          ? <strong key={j} className="text-[var(--text-1)] font-medium">{part.slice(2, -2)}</strong>
-          : <span key={j}>{part}</span>
-      )
+  const inline = (text: string) =>
+    text.split(/(\*\*[^*]+\*\*)/).map((part, j) =>
+      part.startsWith('**') && part.endsWith('**')
+        ? <strong key={j} className="text-[var(--text-1)] font-medium">{part.slice(2, -2)}</strong>
+        : <span key={j}>{part}</span>
+    )
 
-    if (block.startsWith('```')) {
-      const code = block.replace(/```[a-z]*/g, '').replace(/```/g, '').trim()
-      return (
-        <div key={i} className="rounded-lg overflow-hidden my-5 border border-[var(--border)]">
-          <div className="flex gap-1.5 px-3.5 py-2 bg-[var(--bg-surface)] border-b border-[var(--border)]">
+  // Split on code fences FIRST so blank lines inside code blocks are preserved
+  const segments = body.split(/(```[\s\S]*?```)/g)
+  const nodes: React.ReactNode[] = []
+  let key = 0
+
+  for (const seg of segments) {
+    if (seg.startsWith('```')) {
+      const firstNewline = seg.indexOf('\n')
+      const lang = firstNewline > 3 ? seg.slice(3, firstNewline).trim() : ''
+      const code = seg
+        .slice(firstNewline > 0 ? firstNewline + 1 : 3)
+        .replace(/```\s*$/, '')
+        .replace(/\n$/, '')
+      nodes.push(
+        <div key={key++} className="rounded-lg overflow-hidden my-5 border border-[var(--border)]">
+          <div className="flex items-center gap-1.5 px-3.5 py-2 bg-[var(--bg-surface)] border-b border-[var(--border)]">
             {['#ff5f57','#ffbd2e','#28c840'].map(c => (
               <div key={c} className="w-2 h-2 rounded-full opacity-75" style={{ background: c }} />
             ))}
+            {lang && (
+              <span className="ml-auto text-[10px] font-mono text-[var(--text-3)] uppercase tracking-wider">
+                {lang}
+              </span>
+            )}
           </div>
-          <pre className="m-0 p-4 bg-[#080a14] overflow-auto">
-            <code className="text-[12px] font-mono text-white/70 leading-[1.8]">{code}</code>
+          <pre className="m-0 p-4 bg-[#080a14] overflow-x-auto">
+            <code className="text-[12px] font-mono text-white/70 leading-[1.8] whitespace-pre">{code}</code>
           </pre>
         </div>
       )
+      continue
     }
 
-    if (block.startsWith('## ')) {
-      return (
-        <h2 key={i} className="text-[17px] font-medium text-[var(--text-1)] tracking-tight mt-8 mb-2.5 font-syne">
-          {block.replace('## ', '')}
-        </h2>
+    const blocks = seg.split(/\n\n+/).filter(b => b.trim())
+    for (const block of blocks) {
+      const trimmed = block.trim()
+
+      if (trimmed.startsWith('## ')) {
+        nodes.push(
+          <h2 key={key++} className="text-[17px] font-medium text-[var(--text-1)] tracking-tight mt-8 mb-2.5 font-syne">
+            {trimmed.replace(/^##\s+/, '')}
+          </h2>
+        )
+        continue
+      }
+
+      if (trimmed.startsWith('### ')) {
+        nodes.push(
+          <h3 key={key++} className="text-[15px] font-medium text-[var(--text-1)] tracking-tight mt-6 mb-2">
+            {trimmed.replace(/^###\s+/, '')}
+          </h3>
+        )
+        continue
+      }
+
+      if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+        const items = trimmed.split('\n').filter(l => /^[-*]\s/.test(l))
+        nodes.push(
+          <ul key={key++} className="m-0 mb-4 p-0 list-none flex flex-col gap-2">
+            {items.map((item, j) => (
+              <li key={j} className="flex gap-2.5 text-[14px] text-[var(--text-2)] leading-[1.7]">
+                <span className="text-indigo-400 flex-shrink-0">→</span>
+                {inline(item.replace(/^[-*]\s/, ''))}
+              </li>
+            ))}
+          </ul>
+        )
+        continue
+      }
+
+      nodes.push(
+        <p key={key++} className="text-[14px] text-[var(--text-2)] leading-[1.85] mb-4">
+          {inline(trimmed)}
+        </p>
       )
     }
+  }
 
-    if (block.startsWith('- ') || block.startsWith('* ')) {
-      const items = block.split('\n').filter(l => /^[-*]\s/.test(l))
-      return (
-        <ul key={i} className="m-0 mb-4 p-0 list-none flex flex-col gap-2">
-          {items.map((item, j) => (
-            <li key={j} className="flex gap-2.5 text-[14px] text-[var(--text-2)] leading-[1.7]">
-              <span className="text-indigo-400 flex-shrink-0">→</span>
-              {inline(item.replace(/^[-*]\s/, ''))}
-            </li>
-          ))}
-        </ul>
-      )
-    }
-
-    return (
-      <p key={i} className="text-[14px] text-[var(--text-2)] leading-[1.85] mb-4">
-        {inline(block)}
-      </p>
-    )
-  })
+  return nodes
 }
 
 /* ── Comments ────────────────────────────────────────────────────────────────── */
