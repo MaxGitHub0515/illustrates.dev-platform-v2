@@ -27,6 +27,7 @@ export function BlogList() {
         && (!activeTag || p.tags.includes(activeTag))
   }), [data, search, activeTag])
 
+  // Always split into featured + rest regardless of active tag or search
   const [featured, ...rest] = filtered
 
   return (
@@ -95,8 +96,8 @@ export function BlogList() {
           />
         ) : (
           <>
-            {/* Featured card */}
-            {featured && !search && !activeTag && (
+            {/* Featured card — always shows the first result, tag filter or not */}
+            {featured && (
               <Link href={`/blog/${featured.slug}`} className="block no-underline mb-3">
                 <div className="grid grid-cols-[4px_1fr] card overflow-hidden">
                   <div className={BAR_COLORS[0]} />
@@ -117,14 +118,14 @@ export function BlogList() {
               </Link>
             )}
 
-            {/* Row list */}
-            {(search || activeTag ? filtered : rest).length > 0 && (
+            {/* Row list — remaining results */}
+            {rest.length > 0 && (
               <div className="border border-[var(--border)] rounded-xl overflow-hidden">
-                {(search || activeTag ? filtered : rest).map((post: ApiPost, i: number) => (
+                {rest.map((post: ApiPost, i: number) => (
                   <div key={post._id}>
                     {i > 0 && <div className="h-px bg-[var(--border)]" />}
                     <Link href={`/blog/${post.slug}`} className="grid grid-cols-[4px_1fr_auto] items-center no-underline row-hover">
-                      <div className={`self-stretch ${BAR_COLORS[i % BAR_COLORS.length]}`} />
+                      <div className={`self-stretch ${BAR_COLORS[(i + 1) % BAR_COLORS.length]}`} />
                       <div className="py-4 px-4.5">
                         <p className="text-[14px] font-medium text-[var(--text-1)] mb-1">{post.title}</p>
                         <div className="flex gap-1.5 items-center">
