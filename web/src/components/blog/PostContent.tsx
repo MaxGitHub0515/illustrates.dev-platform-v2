@@ -4,8 +4,23 @@ import Link from 'next/link'
 import { useUser } from '@clerk/nextjs'
 import type { ApiPost } from '@/types/api'
 
-/* ── Markdown-lite renderer ─────────────────────────────────────────────────── */
+/* ── Markdown-lite sequential state-machine renderer ────────────────────────── */
 function renderBody(body: string) {
+  if (!body) return []
+
+  // Normalize copy-pasted non-breaking spaces (\u00a0) to normal spaces (\u0020)
+  const normalizedBody = body.replace(/\u00a0/g, ' ')
+  const lines = normalizedBody.split('\n')
+  
+  const nodes: React.ReactNode[] = []
+  let key = 0
+  
+  // Parser state trackers
+  let inCodeBlock = false
+  let codeLines: string[] = []
+  let codeLang = ''
+  let currentListItems: string[] = []
+
   const inline = (text: string) =>
     text.split(/(\*\*[^*]+\*\*)/).map((part, j) =>
       part.startsWith('**') && part.endsWith('**')
@@ -13,83 +28,108 @@ function renderBody(body: string) {
         : <span key={j}>{part}</span>
     )
 
-  // Split on code fences FIRST so blank lines inside code blocks are preserved
-  const segments = body.split(/(```[\s\S]*?```)/g)
-  const nodes: React.ReactNode[] = []
-  let key = 0
-
-  for (const seg of segments) {
-    if (seg.startsWith('```')) {
-      const firstNewline = seg.indexOf('\n')
-      const lang = firstNewline > 3 ? seg.slice(3, firstNewline).trim() : ''
-      const code = seg
-        .slice(firstNewline > 0 ? firstNewline + 1 : 3)
-        .replace(/```\s*$/, '')
-        .replace(/\n$/, '')
+  const flushList = () => {
+    if (currentListItems.length > 0) {
       nodes.push(
-        <div key={key++} className="rounded-lg overflow-hidden my-5 border border-[var(--border)]">
-          <div className="flex items-center gap-1.5 px-3.5 py-2 bg-[var(--bg-surface)] border-b border-[var(--border)]">
-            {['#ff5f57','#ffbd2e','#28c840'].map(c => (
-              <div key={c} className="w-2 h-2 rounded-full opacity-75" style={{ background: c }} />
-            ))}
-            {lang && (
-              <span className="ml-auto text-[10px] font-mono text-[var(--text-3)] uppercase tracking-wider">
-                {lang}
-              </span>
-            )}
+        <ul key={`list-${key++}`} className="m-0 mb-4 p-0 list-none flex flex-col gap-2">
+          {currentListItems.map((item, j) => (
+            <li key={j} className="flex gap-2.5 text-[14px] text-[var(--text-2)] leading-[1.7]">
+              <span className="text-indigo-400 flex-shrink-0">→</span>
+              {inline(item)}
+            </li>
+          ))}
+        </ul>
+      )
+      currentListItems = []
+    }
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const trimmed = line.trim()
+
+    // 1. Handle Code Block Toggles
+    if (trimmed.startsWith('```')) {
+      if (inCodeBlock) {
+        const codeContent = codeLines.join('\n')
+        nodes.push(
+          <div key={`code-${key++}`} className="rounded-lg overflow-hidden my-5 border border-[var(--border)]">
+            <div className="flex items-center gap-1.5 px-3.5 py-2 bg-[var(--bg-surface)] border-b border-[var(--border)]">
+              {['#ff5f57','#ffbd2e','#28c840'].map(c => (
+                <div key={c} className="w-2 h-2 rounded-full opacity-75" style={{ background: c }} />
+              ))}
+              {codeLang && (
+                <span className="ml-auto text-[10px] font-mono text-[var(--text-3)] uppercase tracking-wider">
+                  {codeLang}
+                </span>
+              )}
+            </div>
+            <pre className="m-0 p-4 bg-[#080a14] overflow-x-auto">
+              <code className="text-[12px] font-mono text-white/70 leading-[1.8] whitespace-pre">{codeContent}</code>
+            </pre>
           </div>
-          <pre className="m-0 p-4 bg-[#080a14] overflow-x-auto">
-            <code className="text-[12px] font-mono text-white/70 leading-[1.8] whitespace-pre">{code}</code>
-          </pre>
-        </div>
+        )
+        inCodeBlock = false;
+        codeLines = [];
+        codeLang = '';
+      } else {
+        flushList()
+        inCodeBlock = true
+        codeLang = trimmed.slice(3).trim()
+      }
+      continue
+    }
+
+    // Capture precise contents inside code segments sequentially
+    if (inCodeBlock) {
+      codeLines.push(line)
+      continue
+    }
+
+    // 2. Headings
+    if (trimmed.startsWith('## ')) {
+      flushList()
+      nodes.push(
+        <h2 key={`h2-${key++}`} className="text-[17px] font-medium text-[var(--text-1)] tracking-tight mt-8 mb-2.5 font-syne">
+          {trimmed.replace(/^##\s+/, '')}
+        </h2>
       )
       continue
     }
 
-    const blocks = seg.split(/\n\n+/).filter(b => b.trim())
-    for (const block of blocks) {
-      const trimmed = block.trim()
-
-      if (trimmed.startsWith('## ')) {
-        nodes.push(
-          <h2 key={key++} className="text-[17px] font-medium text-[var(--text-1)] tracking-tight mt-8 mb-2.5 font-syne">
-            {trimmed.replace(/^##\s+/, '')}
-          </h2>
-        )
-        continue
-      }
-
-      if (trimmed.startsWith('### ')) {
-        nodes.push(
-          <h3 key={key++} className="text-[15px] font-medium text-[var(--text-1)] tracking-tight mt-6 mb-2">
-            {trimmed.replace(/^###\s+/, '')}
-          </h3>
-        )
-        continue
-      }
-
-      if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-        const items = trimmed.split('\n').filter(l => /^[-*]\s/.test(l))
-        nodes.push(
-          <ul key={key++} className="m-0 mb-4 p-0 list-none flex flex-col gap-2">
-            {items.map((item, j) => (
-              <li key={j} className="flex gap-2.5 text-[14px] text-[var(--text-2)] leading-[1.7]">
-                <span className="text-indigo-400 flex-shrink-0">→</span>
-                {inline(item.replace(/^[-*]\s/, ''))}
-              </li>
-            ))}
-          </ul>
-        )
-        continue
-      }
-
+    if (trimmed.startsWith('### ')) {
+      flushList()
       nodes.push(
-        <p key={key++} className="text-[14px] text-[var(--text-2)] leading-[1.85] mb-4">
-          {inline(trimmed)}
-        </p>
+        <h3 key={`h3-${key++}`} className="text-[15px] font-medium text-[var(--text-1)] tracking-tight mt-6 mb-2">
+          {trimmed.replace(/^###\s+/, '')}
+        </h3>
       )
+      continue
     }
+
+    // 3. Unordered Lists
+    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      currentListItems.push(trimmed.replace(/^[-*]\s+/, ''))
+      continue
+    }
+
+    // 4. White space segmentation rules
+    if (trimmed === '') {
+      flushList()
+      continue
+    }
+
+    // 5. Normal paragraphs falling through rules
+    flushList()
+    nodes.push(
+      <p key={`p-${key++}`} className="text-[14px] text-[var(--text-2)] leading-[1.85] mb-4">
+        {inline(trimmed)}
+      </p>
+    )
   }
+
+  // Safety flush if post ends abruptly on a list items element
+  flushList()
 
   return nodes
 }
