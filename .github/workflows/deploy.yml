@@ -37,7 +37,7 @@ jobs:
         run: make typecheck
 
       - name: Build Docker containers
-        run: docker-compose build
+        run: docker compose build
 
       - name: Deploy to Debian VM
         uses: appleboy/ssh-action@v1.0.3
