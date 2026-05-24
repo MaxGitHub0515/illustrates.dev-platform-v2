@@ -88,3 +88,6 @@ docker exec -it illustrates_minio mc mb local/portfolio
 docker exec -it illustrates_minio mc anonymous set download local/portfolio/cv/
 ```
 >>>>>>> 9aef663 (Uploading beta/v2 platform)
+
+
+<!-- triggering deploy action after final fix -->
