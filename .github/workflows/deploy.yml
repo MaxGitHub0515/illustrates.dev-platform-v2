@@ -37,7 +37,7 @@ jobs:
         run: make typecheck
 
       - name: Build Docker containers
-        run: docker compose build
+        run: docker-compose build
 
       - name: Deploy to Debian VM
         uses: appleboy/ssh-action@v1.0.3
@@ -46,7 +46,7 @@ jobs:
           username: ${{ secrets.GCP_USER }}
           key: ${{ secrets.GCP_SSH_KEY }}
           script: |
-            cd ~/portfolio
+            cd ~/illustrates.dev-platform-v2
             git checkout production-ready
             git pull origin production-ready
-            docker compose up -d --build
+            docker-compose up -d --build
