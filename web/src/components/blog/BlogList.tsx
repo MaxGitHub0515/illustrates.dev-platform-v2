@@ -27,9 +27,6 @@ export function BlogList() {
         && (!activeTag || p.tags.includes(activeTag))
   }), [data, search, activeTag])
 
-  // Always split into featured + rest regardless of active tag or search
-  const [featured, ...rest] = filtered
-
   return (
     <div className="bg-[var(--bg-base)] min-h-[70vh]">
       <div className="max-w-[820px] mx-auto px-7 py-12">
@@ -56,7 +53,7 @@ export function BlogList() {
           />
         </div>
 
-        {/* Tags */}
+        {/* Tags Links */}
         {allTags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-7">
             <button
@@ -95,53 +92,56 @@ export function BlogList() {
             action={(search || activeTag) ? { label: 'Clear', onClick: () => { setSearch(''); setActiveTag(null) } } : undefined}
           />
         ) : (
-          <>
-            {/* Featured card — always shows the first result, tag filter or not */}
-            {featured && (
-              <Link href={`/blog/${featured.slug}`} className="block no-underline mb-3">
-                <div className="grid grid-cols-[4px_1fr] card overflow-hidden">
-                  <div className={BAR_COLORS[0]} />
+          /* Solid, Unified List Feed mapping strategy */
+          <div className="flex flex-col gap-4">
+            {filtered.map((post: ApiPost, index: number) => (
+              <Link 
+                href={`/blog/${post.slug}`} 
+                key={post._id || post.slug} 
+                className="block no-underline"
+              >
+                {/* Grid structural alignment check: 
+                  4px vertical bar width -> pl-5 padding to push clean text off the accent bar margin layout
+                */}
+                <div className="grid grid-cols-[4px_1fr] border border-[var(--border)] bg-[var(--bg-surface)] hover:border-[var(--border-mid)] rounded-xl overflow-hidden transition-all duration-150">
+                  
+                  {/* Left accent color strip */}
+                  <div className={BAR_COLORS[index % BAR_COLORS.length]} />
+                  
+                  {/* Outer Padding Box */}
                   <div className="p-6">
-                    <div className="flex gap-1.5 mb-2.5">
-                      {featured.tags.slice(0, 3).map(t => (
+                    {/* Header Row tags */}
+                    <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
+                      {post.tags.slice(0, 3).map(t => (
                         <span key={t} className="tag">{t}</span>
                       ))}
-                      <span className="ml-auto text-[11px] text-[var(--text-3)]">{featured.viewCount} views</span>
+                      <span className="ml-auto text-[11px] text-[var(--text-3)]">
+                        {post.viewCount ?? 0} views
+                      </span>
                     </div>
-                    <h2 className="text-[17px] font-medium text-[var(--text-1)] tracking-tight mb-1.5 leading-tight">{featured.title}</h2>
-                    {featured.description && <p className="text-[13px] text-[var(--text-2)] leading-relaxed mb-3">{featured.description}</p>}
-                    <span className="text-[12px] text-[var(--text-3)]">
-                      {new Date(featured.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </span>
+
+                    {/* Title */}
+                    <h2 className="text-[17px] font-medium text-[var(--text-1)] tracking-tight mb-1.5 leading-tight font-syne">
+                      {post.title}
+                    </h2>
+
+                    {/* Description */}
+                    {post.description && (
+                      <p className="text-[13px] text-[var(--text-2)] leading-relaxed mb-3.5">
+                        {post.description}
+                      </p>
+                    )}
+
+                    {/* Footer Date Line */}
+                    <div className="text-[12px] text-[var(--text-3)]">
+                      {new Date(post.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </div>
                   </div>
+
                 </div>
               </Link>
-            )}
-
-            {/* Row list — remaining results */}
-            {rest.length > 0 && (
-              <div className="border border-[var(--border)] rounded-xl overflow-hidden">
-                {rest.map((post: ApiPost, i: number) => (
-                  <div key={post._id}>
-                    {i > 0 && <div className="h-px bg-[var(--border)]" />}
-                    <Link href={`/blog/${post.slug}`} className="grid grid-cols-[4px_1fr_auto] items-center no-underline row-hover">
-                      <div className={`self-stretch ${BAR_COLORS[(i + 1) % BAR_COLORS.length]}`} />
-                      <div className="py-4 px-4.5">
-                        <p className="text-[14px] font-medium text-[var(--text-1)] mb-1">{post.title}</p>
-                        <div className="flex gap-1.5 items-center">
-                          {post.tags.slice(0, 3).map(t => <span key={t} className="tag">{t}</span>)}
-                          <span className="text-[11px] text-[var(--text-3)] ml-1">{post.viewCount} views</span>
-                        </div>
-                      </div>
-                      <span className="px-4 text-[12px] text-[var(--text-3)] whitespace-nowrap">
-                        {new Date(post.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                      </span>
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
+            ))}
+          </div>
         )}
       </div>
     </div>
