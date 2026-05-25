@@ -37,6 +37,28 @@ function Field({ label, error, required, hint, children }: {
   )
 }
 
+/* ── Confirm delete dialog ───────────────────────────────────────────────────── */
+function ConfirmDelete({ name, onConfirm, onCancel }: {
+  name: string; onConfirm: () => void; onCancel: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4"
+         style={{ background:'rgba(4,2,16,0.88)', backdropFilter:'blur(8px)' }}>
+      <div className="w-full max-w-[400px] rounded-2xl border border-red-500/20 p-6"
+           style={{ background:'#0d0b1e' }}>
+        <h3 className="text-[15px] font-medium text-[var(--text-1)] mb-2">Delete post?</h3>
+        <p className="text-[13px] text-[var(--text-2)] mb-5">
+          <strong className="text-[var(--text-1)]">"{name}"</strong> will be permanently deleted. This cannot be undone.
+        </p>
+        <div className="flex gap-2.5 justify-end">
+          <button onClick={onCancel} className="btn-ghost btn-sm">Cancel</button>
+          <button onClick={onConfirm} className="btn-danger btn-sm">Yes, delete</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function PostForm({ initial, onSave, onCancel, saving, saveError }: {
   initial: CreatePostDto; onSave: (dto: CreatePostDto) => void
   onCancel: () => void; saving: boolean; saveError: string
@@ -124,7 +146,6 @@ function PostForm({ initial, onSave, onCancel, saving, saveError }: {
           </Field>
 
           <Field label="Body (Markdown)" required error={errors.body}>
-            {/* Toolbar */}
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-t-lg border border-b-0 border-[var(--border)] bg-[var(--bg-surface)]">
               <span className="text-[10px] uppercase tracking-wider text-[var(--text-3)] font-medium">Insert</span>
               <div className="h-3 w-px bg-[var(--border)]" />
@@ -148,55 +169,32 @@ function PostForm({ initial, onSave, onCancel, saving, saveError }: {
                 )}
                 {uploading ? 'Uploading…' : 'Image'}
               </button>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
-                className="hidden"
-                onChange={handleImageUpload}
-              />
+              <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+                     className="hidden" onChange={handleImageUpload} />
               {uploadErr && <span className="text-[11px] text-red-400 ml-1">⚠ {uploadErr}</span>}
             </div>
 
-            {/* Size picker — appears after upload, before inserting */}
             {pending && (
               <div className="flex items-center gap-2 px-3 py-2 border border-t-0 border-b-0 border-indigo-500/25 bg-indigo-500/8 flex-wrap">
                 <span className="text-[11px] text-indigo-300 flex-shrink-0">
                   Size for <strong className="text-indigo-200">{pending.name}</strong>:
                 </span>
-                {[
-                  { label: 'Full',   size: 100 },
-                  { label: 'Large',  size: 75  },
-                  { label: 'Medium', size: 50  },
-                  { label: 'Small',  size: 25  },
-                ].map(({ label, size }) => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => insertWithSize(size)}
-                    className="px-2.5 py-1 rounded-md text-[11px] font-medium border border-indigo-400/35 bg-indigo-500/15 text-indigo-300 hover:bg-indigo-500/25 transition-all cursor-pointer"
-                  >
+                {[{ label:'Full', size:100 },{ label:'Large', size:75 },{ label:'Medium', size:50 },{ label:'Small', size:25 }].map(({ label, size }) => (
+                  <button key={size} type="button" onClick={() => insertWithSize(size)}
+                          className="px-2.5 py-1 rounded-md text-[11px] font-medium border border-indigo-400/35 bg-indigo-500/15 text-indigo-300 hover:bg-indigo-500/25 transition-all cursor-pointer">
                     {label}{size < 100 ? ` (${size}%)` : ''}
                   </button>
                 ))}
-                <button
-                  type="button"
-                  onClick={() => setPending(null)}
-                  className="px-2 py-1 rounded-md text-[11px] text-[var(--text-3)] hover:text-[var(--text-1)] cursor-pointer"
-                >
+                <button type="button" onClick={() => setPending(null)}
+                        className="px-2 py-1 rounded-md text-[11px] text-[var(--text-3)] hover:text-[var(--text-1)] cursor-pointer">
                   Cancel
                 </button>
               </div>
             )}
 
-            <textarea
-              ref={textareaRef}
-              value={form.body}
-              onChange={e=>set('body',e.target.value)}
-              rows={8}
-              className={`${inputCls(errors.body)} resize-y rounded-t-none border-t-0`}
-              placeholder="## Introduction&#10;Write your post in Markdown..."
-            />
+            <textarea ref={textareaRef} value={form.body} onChange={e=>set('body',e.target.value)}
+                      rows={8} className={`${inputCls(errors.body)} resize-y rounded-t-none border-t-0`}
+                      placeholder="## Introduction&#10;Write your post in Markdown..." />
           </Field>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -225,8 +223,7 @@ function PostForm({ initial, onSave, onCancel, saving, saveError }: {
 
         <div className="px-5 py-4 border-t border-[var(--border)] flex gap-2.5 justify-end flex-shrink-0">
           <button onClick={onCancel} className="btn-ghost btn-sm">Cancel</button>
-          <button onClick={submit} disabled={saving}
-                  className="btn-primary btn-sm"
+          <button onClick={submit} disabled={saving} className="btn-primary btn-sm"
                   style={{background:'linear-gradient(135deg,#fb923c,#f472b6)'}}>
             {saving ? 'Saving…' : initial.title ? 'Update post' : 'Publish post'}
           </button>
@@ -246,6 +243,7 @@ export default function AdminPosts() {
   const [search,    setSearch]    = useState('')
   const [modal,     setModal]     = useState<'create'|{post:ApiPost}|null>(null)
   const [saveError, setSaveError] = useState('')
+  const [confirmId, setConfirmId] = useState<{ id: string; title: string } | null>(null)
 
   const { data, isLoading, error, refetch } = usePosts()
   const createMut = useCreatePost()
@@ -267,6 +265,16 @@ export default function AdminPosts() {
     }
   }
 
+  function handleDeleteClick(id: string, title: string) {
+    setConfirmId({ id, title })
+  }
+
+  function handleDeleteConfirm() {
+    if (!confirmId) return
+    deleteMut.mutate(confirmId.id)
+    setConfirmId(null)
+  }
+
   const getInitial = (): CreatePostDto => {
     if (!modal || modal === 'create') return EMPTY
     const p = modal.post
@@ -281,6 +289,13 @@ export default function AdminPosts() {
         <PostForm initial={getInitial()} onSave={handleSave}
                   onCancel={() => { setModal(null); setSaveError('') }}
                   saving={saving} saveError={saveError} />
+      )}
+      {confirmId && (
+        <ConfirmDelete
+          name={confirmId.title}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setConfirmId(null)}
+        />
       )}
 
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-6">
@@ -337,8 +352,9 @@ export default function AdminPosts() {
                   <td className="px-4 py-3">
                     <div className="flex gap-1.5">
                       <button onClick={()=>{setModal({post:p});setSaveError('')}} className="btn-ghost btn-sm">Edit</button>
-                      <button onClick={()=>deleteMut.mutate(p._id)} disabled={deleteMut.isPending} className="btn-danger btn-sm">
-                        {deleteMut.isPending?'…':'Delete'}
+                      <button onClick={() => handleDeleteClick(p._id, p.title)}
+                              disabled={deleteMut.isPending} className="btn-danger btn-sm">
+                        {deleteMut.isPending ? '…' : 'Delete'}
                       </button>
                     </div>
                   </td>
