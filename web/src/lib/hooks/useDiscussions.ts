@@ -15,6 +15,46 @@ export function useDiscussions(params?: string) {
   })
 }
 
+export function useDiscussion(id: string) {
+  const { getToken } = useAuth()
+  return useQuery({
+    queryKey: ['discussion', id],
+    queryFn: async () => {
+      const token = await getToken()
+      return api.get<ApiDiscussion>(`/discussions/${id}`, token)
+    },
+    enabled: !!id,
+  })
+}
+
+export function useReplies(discussionId: string) {
+  const { getToken } = useAuth()
+  return useQuery({
+    queryKey: ['replies', discussionId],
+    queryFn: async () => {
+      const token = await getToken()
+      return api.list<any>(`/discussions/${discussionId}/replies`, token)
+    },
+    enabled: !!discussionId,
+  })
+}
+
+export function useCreateReply() {
+  const { getToken } = useAuth()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ discussionId, body }: { discussionId: string; body: string }) => {
+      const token = await getToken()
+      return api.post(`/discussions/${discussionId}/replies`, { body }, token)
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ['replies', variables.discussionId] })
+      qc.invalidateQueries({ queryKey: ['discussion', variables.discussionId] })
+      qc.invalidateQueries({ queryKey: ['discussions'] })
+    },
+  })
+}
+
 export function useDeleteDiscussion() {
   const { getToken } = useAuth()
   const qc = useQueryClient()

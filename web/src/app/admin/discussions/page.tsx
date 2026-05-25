@@ -10,9 +10,31 @@ const STATUS_CLS: Record<string, string> = {
   locked: 'bg-red-500/10 border-red-500/25 text-red-400',
 }
 
+function ConfirmDelete({ name, onConfirm, onCancel }: {
+  name: string; onConfirm: () => void; onCancel: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4"
+         style={{ background:'rgba(4,2,16,0.88)', backdropFilter:'blur(8px)' }}>
+      <div className="w-full max-w-[400px] rounded-2xl border border-red-500/20 p-6"
+           style={{ background:'#0d0b1e' }}>
+        <h3 className="text-[15px] font-medium text-[var(--text-1)] mb-2">Delete discussion?</h3>
+        <p className="text-[13px] text-[var(--text-2)] mb-5">
+          <strong className="text-[var(--text-1)]">"{name}"</strong> and all its replies will be permanently deleted. This cannot be undone.
+        </p>
+        <div className="flex gap-2.5 justify-end">
+          <button onClick={onCancel} className="btn-ghost btn-sm">Cancel</button>
+          <button onClick={onConfirm} className="btn-danger btn-sm">Yes, delete</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminDiscussions() {
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('all')
+  const [search,    setSearch]    = useState('')
+  const [status,    setStatus]    = useState('all')
+  const [confirmId, setConfirmId] = useState<{ id: string; title: string } | null>(null)
 
   const params = `${status !== 'all' ? `status=${status}&` : ''}${search ? `search=${encodeURIComponent(search)}&` : ''}sort=createdAt&order=desc`
   const { data, isLoading, error, refetch } = useDiscussions(params)
@@ -20,8 +42,22 @@ export default function AdminDiscussions() {
   const statusMut = useUpdateDiscussionStatus()
   const items = data?.data ?? []
 
+  function handleDeleteConfirm() {
+    if (!confirmId) return
+    deleteMut.mutate(confirmId.id)
+    setConfirmId(null)
+  }
+
   return (
     <div className="p-6 sm:p-9">
+      {confirmId && (
+        <ConfirmDelete
+          name={confirmId.title}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setConfirmId(null)}
+        />
+      )}
+
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-6">
         <div>
           <h1 className="text-[22px] font-medium text-[var(--text-1)] mb-1">Discussions</h1>
@@ -83,13 +119,21 @@ export default function AdminDiscussions() {
                   <td className="px-4 py-3 text-[13px] text-[var(--text-2)] font-mono">{d.replyCount}</td>
                   <td className="px-4 py-3 text-[12px] text-[var(--text-3)]">{new Date(d.createdAt).toLocaleDateString()}</td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-1.5">
-                      {d.status !== 'locked' ? (
-                        <button onClick={()=>statusMut.mutate({id:d._id, status:'locked'})} className="btn-ghost btn-sm">Lock</button>
-                      ) : (
-                        <button onClick={()=>statusMut.mutate({id:d._id, status:'open'})} className="btn-ghost btn-sm text-emerald-400">Open</button>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {d.status !== 'open' && (
+                        <button onClick={()=>statusMut.mutate({id:d._id, status:'open'})}
+                                className="btn-ghost btn-sm text-emerald-400">Open</button>
                       )}
-                      <button onClick={()=>deleteMut.mutate(d._id)} disabled={deleteMut.isPending} className="btn-danger btn-sm">
+                      {d.status !== 'closed' && (
+                        <button onClick={()=>statusMut.mutate({id:d._id, status:'closed'})}
+                                className="btn-ghost btn-sm">Close</button>
+                      )}
+                      {d.status !== 'locked' && (
+                        <button onClick={()=>statusMut.mutate({id:d._id, status:'locked'})}
+                                className="btn-ghost btn-sm text-red-400">Lock</button>
+                      )}
+                      <button onClick={() => setConfirmId({ id: d._id, title: d.title })}
+                              disabled={deleteMut.isPending} className="btn-danger btn-sm">
                         {deleteMut.isPending ? '…' : 'Delete'}
                       </button>
                     </div>
