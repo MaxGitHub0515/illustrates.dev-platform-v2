@@ -24,6 +24,7 @@ const envSchema = z.object({
   STORAGE_ACCESS_KEY: z.string().min(1),
   STORAGE_SECRET_KEY: z.string().min(1),
   STORAGE_BUCKET:     z.string().min(1),
+  STORAGE_PUBLIC_URL: z.string().url().optional().default(''),
   STORAGE_REGION:     z.string().default('us-east-1'),
   STORAGE_USE_SSL:    z.string().transform((v) => v === 'true').default('false'),
 

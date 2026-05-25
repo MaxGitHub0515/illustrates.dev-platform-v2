@@ -4,6 +4,7 @@ import { uploadFile }       from '../../../lib/storage'
 import { sendSuccess }      from '../../../utils/response'
 import { AppError }         from '../../../utils/AppError'
 import { logger }           from '../../../lib/logger'
+import { env }              from '../../../config/env'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
 const MAX_SIZE_MB   = 5
@@ -27,8 +28,11 @@ export const uploadMiddleware = multer({
 export async function uploadBlogImage(req: Request, res: Response): Promise<void> {
   if (!req.file) throw AppError.badRequest('No image file provided')
 
-  const { key, url } = await uploadFile(req.file, 'blog-images')
+  const { key } = await uploadFile(req.file, 'blog-images')
   logger.info('Blog image uploaded', { key, size: req.file.size })
+
+  const publicBase = env.STORAGE_PUBLIC_URL || env.STORAGE_ENDPOINT
+  const url = `${publicBase}/${env.STORAGE_BUCKET}/${key}`
 
   sendSuccess(res, {
     url,
